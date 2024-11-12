@@ -4,7 +4,7 @@ import { FaEdit, FaTrash } from "react-icons/fa";
 
 function VideoUploader() {
   const [title, setTitle] = useState("");
-  const [videoFile, setVideoFile] = useState(null);
+  const [sourceUrl, setSourceUrl] = useState("");
   const [videos, setVideos] = useState([]);
 
   useEffect(() => {
@@ -21,37 +21,32 @@ function VideoUploader() {
     fetchVideos();
   }, []);
 
-  const handleUpload = async () => {
-    if (!title || !videoFile) {
-      alert("Please provide a title and select a video file.");
+  const handleAddVideo = async () => {
+    if (!title || !sourceUrl) {
+      alert("Please provide a title and a source URL.");
       return;
     }
-    const formData = new FormData();
-    formData.append("video", videoFile);
 
     try {
       const response = await axios.post(
-        `https://tg-video-server.vercel.app/api/video/addVideo/${title}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        "https://tg-video-server.vercel.app/api/video/addVideo",
+        { title, source: sourceUrl }
       );
-      const newVideo = response.data.data;
+      const newVideo = response.data.video;
       setVideos((prevVideos) => [...prevVideos, newVideo]);
       setTitle("");
-      setVideoFile(null);
+      setSourceUrl("");
     } catch (error) {
-      console.error("Error uploading video:", error);
-      alert("There was an error uploading the video.");
+      console.error("Error adding video:", error);
+      alert("There was an error adding the video.");
     }
   };
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`https://tg-video-server.vercel.app/api/video/${id}`);
+      await axios.delete(
+        `https://tg-video-server.vercel.app/api/video/delVideo/${id}`
+      );
       setVideos(videos.filter((video) => video._id !== id));
     } catch (error) {
       console.error("Error deleting video:", error);
@@ -59,31 +54,10 @@ function VideoUploader() {
     }
   };
 
-  const handleEdit = async (id) => {
-    const newTitle = prompt("Enter new video title:");
-    if (!newTitle) return;
-
-    try {
-      const response = await axios.put(
-        `https://tg-video-server.vercel.app/api/video/${id}`,
-        { title: newTitle }
-      );
-
-      setVideos(
-        videos.map((video) =>
-          video._id === id ? { ...video, title: newTitle } : video
-        )
-      );
-    } catch (error) {
-      console.error("Error editing video:", error);
-      alert("There was an error editing the video title.");
-    }
-  };
-
   return (
     <div className="max-w-4xl p-8 mx-auto">
       <div className="p-6 mb-8 bg-white rounded-lg shadow-lg">
-        <h2 className="mb-4 text-2xl font-semibold">Upload Video</h2>
+        <h2 className="mb-4 text-2xl font-semibold">Add Video</h2>
         <input
           type="text"
           placeholder="Video Title"
@@ -92,18 +66,17 @@ function VideoUploader() {
           className="w-full p-3 mb-4 border border-gray-300 rounded"
         />
         <input
-          type="file"
-          accept="video/*"
-          onChange={(e) => setVideoFile(e.target.files[0])}
+          type="url"
+          placeholder="Video Source URL"
+          value={sourceUrl}
+          onChange={(e) => setSourceUrl(e.target.value)}
           className="w-full p-3 mb-4 border border-gray-300 rounded"
         />
         <button
-          onClick={() => {
-            handleUpload();
-          }}
+          onClick={handleAddVideo}
           className="w-full px-4 py-2 text-white transition bg-blue-600 rounded hover:bg-blue-700"
         >
-          Upload
+          Add Video
         </button>
       </div>
 
@@ -125,12 +98,6 @@ function VideoUploader() {
               <tr key={video._id} className="border-b border-gray-200">
                 <td className="px-5 py-3">{video.title}</td>
                 <td className="flex justify-center px-5 py-3 space-x-4">
-                  <button
-                    onClick={() => handleEdit(video._id)}
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    <FaEdit />
-                  </button>
                   <button
                     onClick={() => handleDelete(video._id)}
                     className="text-red-500 hover:text-red-700"
