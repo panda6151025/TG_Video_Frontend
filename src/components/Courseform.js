@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { FaTrash, FaEdit } from "react-icons/fa";
 import axios from "axios";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
 function VideoUploader() {
   const [title, setTitle] = useState("");
@@ -10,8 +10,10 @@ function VideoUploader() {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        const response = await axios.get("/api/videos"); // Replace with your actual API endpoint
-        setVideos(response.data);
+        const response = await axios.get(
+          "https://tg-video-server.vercel.app/api/video/videoTitle"
+        );
+        setVideos(response.data.data);
       } catch (error) {
         console.error("Error fetching videos:", error);
       }
@@ -24,21 +26,58 @@ function VideoUploader() {
       alert("Please provide a title and select a video file.");
       return;
     }
-    setTitle("");
-    setVideoFile(null);
+    const formData = new FormData();
+    formData.append("video", videoFile);
+
+    try {
+      const response = await axios.post(
+        `https://tg-video-server.vercel.app/api/video/addVideo/${title}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      const newVideo = response.data.data;
+      setVideos((prevVideos) => [...prevVideos, newVideo]);
+      setTitle("");
+      setVideoFile(null);
+    } catch (error) {
+      console.error("Error uploading video:", error);
+      alert("There was an error uploading the video.");
+    }
   };
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/videos/${id}`);
+      await axios.delete(`https://tg-video-server.vercel.app/api/video/${id}`);
       setVideos(videos.filter((video) => video._id !== id));
     } catch (error) {
       console.error("Error deleting video:", error);
+      alert("There was an error deleting the video.");
     }
   };
 
-  const handleEdit = (id) => {
-    console.log("Edit video with ID:", id);
+  const handleEdit = async (id) => {
+    const newTitle = prompt("Enter new video title:");
+    if (!newTitle) return;
+
+    try {
+      const response = await axios.put(
+        `https://tg-video-server.vercel.app/api/video/${id}`,
+        { title: newTitle }
+      );
+
+      setVideos(
+        videos.map((video) =>
+          video._id === id ? { ...video, title: newTitle } : video
+        )
+      );
+    } catch (error) {
+      console.error("Error editing video:", error);
+      alert("There was an error editing the video title.");
+    }
   };
 
   return (
@@ -59,7 +98,9 @@ function VideoUploader() {
           className="w-full p-3 mb-4 border border-gray-300 rounded"
         />
         <button
-          onClick={handleUpload}
+          onClick={() => {
+            handleUpload();
+          }}
           className="w-full px-4 py-2 text-white transition bg-blue-600 rounded hover:bg-blue-700"
         >
           Upload
